@@ -1,6 +1,6 @@
 import { deliveryRepository } from '../repositories/delivery.repository.js';
 import { userRepository } from '../repositories/user.repository.js';
-import { DELIVERY_STATUS, DELIVERY_STATUS_TRANSITIONS, USER_ROLES } from '../constants/index.js';
+import { DELIVERY_STATUS, DELIVERY_STATUS_TRANSITIONS, USER_ROLES, DOCUMENT_TYPES } from '../constants/index.js';
 import {
   InvalidIdError,
   DeliveryNotFoundError,
@@ -8,6 +8,7 @@ import {
   InvalidDeliveryDriverError,
 } from '../errors/custom-errors.js';
 import { logger } from '../config/logger.config.js';
+import { buildFileMetadata, ensureFile, withFileCleanup } from './file.service.js';
 
 const ensureValidId = (id) => {
   if (!deliveryRepository.isValidId(id)) {
@@ -67,6 +68,19 @@ class DeliveryService {
     const updatedDelivery = await deliveryRepository.update(id, changes);
     logger.info(`Entrega ${id} pasó de ${delivery.status} a ${status}`);
     return updatedDelivery;
+  }
+
+  async uploadReceipt(id, file) {
+    ensureFile(file);
+
+    return withFileCleanup(file, async () => {
+      await this.getById(id);
+
+      const metadata = buildFileMetadata(file, DOCUMENT_TYPES.DELIVERY_RECEIPT);
+      const updatedDelivery = await deliveryRepository.addReceipt(id, metadata);
+      logger.info(`Comprobante ${file.filename} asociado a la entrega ${id}`);
+      return updatedDelivery;
+    });
   }
 }
 

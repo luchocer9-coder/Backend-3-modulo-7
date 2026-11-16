@@ -4,7 +4,12 @@ import {
   ORDER_STATUS,
   ORDER_PRIORITY,
   DELIVERY_STATUS,
+  DOCUMENT_TYPES,
+  USER_DOCUMENT_TYPES_BY_ROLE,
 } from '../../constants/index.js';
+import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_MB } from '../../config/multer.config.js';
+
+const ALLOWED_TYPES_TEXT = `Formatos permitidos: ${Object.keys(ALLOWED_FILE_TYPES).join(', ')}. Tamaño máximo: ${MAX_FILE_SIZE_MB} MB`;
 
 const objectId = { type: 'string', example: '6af38d8e956809dfdcdde832' };
 const date = { type: 'string', format: 'date-time' };
@@ -39,6 +44,7 @@ export const schemas = {
       name: { type: 'string', example: 'Ana Pérez' },
       email: { type: 'string', example: 'ana@test.com' },
       role: { type: 'string', enum: Object.values(USER_ROLES) },
+      documents: { type: 'array', items: { $ref: '#/components/schemas/FileMetadata' } },
     },
   },
   UserInput: {
@@ -168,6 +174,7 @@ export const schemas = {
       },
       status: { type: 'string', enum: Object.values(DELIVERY_STATUS) },
       deliveredAt: { ...date, nullable: true, description: 'Fecha de entrega, solo cuando está DELIVERED' },
+      receipts: { type: 'array', items: { $ref: '#/components/schemas/FileMetadata' } },
       createdAt: date,
     },
   },
@@ -179,6 +186,40 @@ export const schemas = {
     properties: {
       status: { type: 'string', enum: Object.values(DELIVERY_STATUS), example: DELIVERY_STATUS.ASSIGNED },
       driver: { ...objectId, description: 'Id de un usuario con rol DRIVER. Obligatorio solo para ASSIGNED' },
+    },
+  },
+
+  // Archivos
+  FileMetadata: {
+    type: 'object',
+    description: 'Metadatos de un archivo subido. El archivo se guarda en el servidor, no en la base',
+    properties: {
+      originalName: { type: 'string', example: 'dni-frente.pdf' },
+      fileName: { type: 'string', example: '1763251200000-a1b2c3d4e5f6.pdf' },
+      path: { type: 'string', example: 'uploads/documents/1763251200000-a1b2c3d4e5f6.pdf' },
+      mimeType: { type: 'string', example: 'application/pdf' },
+      size: { type: 'integer', description: 'Tamaño en bytes', example: 245810 },
+      documentType: { type: 'string', enum: Object.values(DOCUMENT_TYPES) },
+      uploadedAt: date,
+    },
+  },
+  UserDocumentUpload: {
+    type: 'object',
+    required: ['file', 'documentType'],
+    properties: {
+      file: { type: 'string', format: 'binary', description: ALLOWED_TYPES_TEXT },
+      documentType: {
+        type: 'string',
+        enum: USER_DOCUMENT_TYPES_BY_ROLE[USER_ROLES.DRIVER],
+        description: 'DRIVER_LICENSE solo se acepta para usuarios con rol DRIVER',
+      },
+    },
+  },
+  DeliveryReceiptUpload: {
+    type: 'object',
+    required: ['file'],
+    properties: {
+      file: { type: 'string', format: 'binary', description: ALLOWED_TYPES_TEXT },
     },
   },
 

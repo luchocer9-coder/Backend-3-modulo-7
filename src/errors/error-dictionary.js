@@ -50,6 +50,27 @@ export const ERRORS = Object.freeze({
     message: 'Para asignar una entrega hay que enviar el id de un usuario con rol DRIVER',
   },
 
+  // Archivos
+  FILE_REQUIRED: { code: 'FILE_REQUIRED', statusCode: 400, message: 'Hay que enviar un archivo en el campo "file"' },
+  INVALID_FILE_FIELD: {
+    code: 'INVALID_FILE_FIELD',
+    statusCode: 400,
+    message: 'El archivo tiene que enviarse en un único campo llamado "file"',
+  },
+  INVALID_FILE_TYPE: {
+    code: 'INVALID_FILE_TYPE',
+    statusCode: 400,
+    message: 'Tipo de archivo no permitido. Solo se aceptan PDF, JPG y PNG',
+  },
+  FILE_TOO_LARGE: { code: 'FILE_TOO_LARGE', statusCode: 413, message: 'El archivo supera el tamaño máximo permitido' },
+  INVALID_DOCUMENT_TYPE: {
+    code: 'INVALID_DOCUMENT_TYPE',
+    statusCode: 400,
+    message: 'El tipo de documento no es válido para este usuario',
+  },
+  FILE_UPLOAD_ERROR: { code: 'FILE_UPLOAD_ERROR', statusCode: 400, message: 'No se pudo procesar la carga del archivo' },
+  FILE_SAVE_ERROR: { code: 'FILE_SAVE_ERROR', statusCode: 500, message: 'No se pudo guardar el archivo en el servidor' },
+
   // Mocks
   INVALID_MOCK_QTY: { code: 'INVALID_MOCK_QTY', statusCode: 400, message: 'La cantidad de datos a generar no es válida' },
   NEGATIVE_MOCK_QTY: { code: 'NEGATIVE_MOCK_QTY', statusCode: 400, message: 'La cantidad de datos a generar no puede ser negativa' },

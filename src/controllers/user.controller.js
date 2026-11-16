@@ -25,6 +25,11 @@ class UserController {
     await userService.delete(req.params.id);
     res.status(204).send();
   }
+
+  async uploadDocument(req, res) {
+    const user = await userService.uploadDocument(req.params.id, req.file, req.body?.documentType);
+    res.status(201).json({ payload: user });
+  }
 }
 
 export const userController = new UserController();

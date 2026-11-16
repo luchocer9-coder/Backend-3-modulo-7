@@ -1,11 +1,15 @@
 import bcrypt from 'bcryptjs';
 import { userRepository } from '../repositories/user.repository.js';
-import { USER_ROLES } from '../constants/index.js';
+import { USER_ROLES, DOCUMENT_TYPES, USER_DOCUMENT_TYPES_BY_ROLE } from '../constants/index.js';
 import {
   InvalidIdError,
   UserNotFoundError,
   InvalidPasswordError,
+  InvalidDocumentTypeError,
 } from '../errors/custom-errors.js';
+import { buildFileMetadata, ensureFile, moveFile, withFileCleanup } from './file.service.js';
+import { UPLOAD_FOLDERS } from '../config/multer.config.js';
+import { logger } from '../config/logger.config.js';
 
 const MIN_PASSWORD_LENGTH = 8;
 const SALT_ROUNDS = 10;
@@ -76,6 +80,36 @@ class UserService {
     }
 
     return deletedUser;
+  }
+
+  async uploadDocument(id, file, documentType) {
+    ensureFile(file);
+
+    return withFileCleanup(file, async () => {
+      // Primero se valida que sea un tipo de documento de usuario
+      const userDocumentTypes = USER_DOCUMENT_TYPES_BY_ROLE[USER_ROLES.DRIVER];
+
+      if (!userDocumentTypes.includes(documentType)) {
+        throw new InvalidDocumentTypeError(documentType ?? null, userDocumentTypes);
+      }
+
+      // Después, que ese tipo corresponda al rol del usuario
+      const user = await this.getById(id);
+      const allowed = USER_DOCUMENT_TYPES_BY_ROLE[user.role];
+
+      if (!allowed.includes(documentType)) {
+        throw new InvalidDocumentTypeError(documentType, allowed);
+      }
+
+      // Las licencias de conducir van a su propia carpeta
+      if (documentType === DOCUMENT_TYPES.DRIVER_LICENSE) {
+        await moveFile(file, UPLOAD_FOLDERS.DRIVER_LICENSES);
+      }
+
+      const updatedUser = await userRepository.addDocument(id, buildFileMetadata(file, documentType));
+      logger.info(`Documento ${documentType} (${file.filename}) cargado para el usuario ${id}`);
+      return updatedUser;
+    });
   }
 }
 

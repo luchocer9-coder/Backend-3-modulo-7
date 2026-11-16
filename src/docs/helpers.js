@@ -12,6 +12,12 @@ export const body = (name) => ({
   content: { 'application/json': { schema: ref(name) } },
 });
 
+// Body multipart/form-data, para endpoints que reciben archivos
+export const multipartBody = (name) => ({
+  required: true,
+  content: { 'multipart/form-data': { schema: ref(name) } },
+});
+
 // Respuesta exitosa: { payload: ... } con el schema que corresponda
 export const success = (description, payloadSchema) => ({
   description,
@@ -82,6 +88,19 @@ export const EXAMPLES = {
     allowed: ['ASSIGNED', 'CANCELLED'],
   }),
   INVALID_DELIVERY_DRIVER: errorExample(ERRORS.INVALID_DELIVERY_DRIVER, { driver: EXAMPLE_ID, role: 'USER' }),
+  FILE_REQUIRED: errorExample(ERRORS.FILE_REQUIRED, { field: 'file' }),
+  INVALID_FILE_FIELD: errorExample(ERRORS.INVALID_FILE_FIELD, { expected: 'file', received: 'documento' }),
+  INVALID_FILE_TYPE: errorExample(ERRORS.INVALID_FILE_TYPE, {
+    received: 'text/plain .txt',
+    allowed: ['application/pdf', 'image/jpeg', 'image/png'],
+  }),
+  FILE_TOO_LARGE: errorExample(ERRORS.FILE_TOO_LARGE, { maxSizeMB: 5 }),
+  INVALID_DOCUMENT_TYPE: errorExample(ERRORS.INVALID_DOCUMENT_TYPE, {
+    received: 'DRIVER_LICENSE',
+    allowed: ['ID_CARD', 'PROOF_OF_ADDRESS'],
+  }),
+  FILE_UPLOAD_ERROR: errorExample(ERRORS.FILE_UPLOAD_ERROR, { reason: 'Unexpected end of form' }),
+  FILE_SAVE_ERROR: errorExample(ERRORS.FILE_SAVE_ERROR, { reason: 'ENOSPC' }),
   INVALID_MOCK_QTY: errorExample(ERRORS.INVALID_MOCK_QTY, { received: 500, min: 1, max: 100 }, '/api/mocks/users?qty=500'),
   NEGATIVE_MOCK_QTY: errorExample(ERRORS.NEGATIVE_MOCK_QTY, { received: -3 }, '/api/mocks/users?qty=-3'),
   MOCK_SEED_FORBIDDEN: errorExample(ERRORS.MOCK_SEED_FORBIDDEN, null, '/api/mocks/seed'),

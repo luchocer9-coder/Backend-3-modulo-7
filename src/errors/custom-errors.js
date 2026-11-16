@@ -88,6 +88,48 @@ export class InvalidDeliveryDriverError extends AppError {
   }
 }
 
+export class FileRequiredError extends AppError {
+  constructor(field) {
+    super(ERRORS.FILE_REQUIRED, { field });
+  }
+}
+
+export class InvalidFileFieldError extends AppError {
+  constructor(expected, received) {
+    super(ERRORS.INVALID_FILE_FIELD, { expected, received });
+  }
+}
+
+export class InvalidFileTypeError extends AppError {
+  constructor(received, allowed) {
+    super(ERRORS.INVALID_FILE_TYPE, { received, allowed });
+  }
+}
+
+export class FileTooLargeError extends AppError {
+  constructor(maxSizeMB) {
+    super(ERRORS.FILE_TOO_LARGE, { maxSizeMB });
+  }
+}
+
+export class InvalidDocumentTypeError extends AppError {
+  constructor(received, allowed) {
+    super(ERRORS.INVALID_DOCUMENT_TYPE, { received, allowed });
+  }
+}
+
+export class FileUploadError extends AppError {
+  constructor(reason, cause) {
+    super(ERRORS.FILE_UPLOAD_ERROR, { reason }, cause);
+  }
+}
+
+export class FileSaveError extends AppError {
+  constructor(reason, cause) {
+    super(ERRORS.FILE_SAVE_ERROR, { reason }, cause);
+  }
+}
+
 export class InvalidMockQuantityError extends AppError {
   constructor(received, min, max) {
     super(ERRORS.INVALID_MOCK_QTY, { received, min, max });

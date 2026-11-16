@@ -1,4 +1,4 @@
-import { ref, param, listOf, body, success, errorResponse, internalError, EXAMPLES } from '../helpers.js';
+import { ref, param, listOf, body, multipartBody, success, errorResponse, internalError, EXAMPLES } from '../helpers.js';
 
 const notFound = errorResponse('No existe el usuario', [EXAMPLES.USER_NOT_FOUND]);
 
@@ -66,6 +66,35 @@ export const usersPaths = {
         400: errorResponse('Id inválido', [EXAMPLES.INVALID_ID]),
         404: notFound,
         500: internalError,
+      },
+    },
+  },
+  '/api/users/{id}/documents': {
+    post: {
+      tags: ['Users'],
+      summary: 'Subir un documento de un usuario',
+      description:
+        'Recibe un archivo en el campo file y el tipo de documento en documentType, como multipart/form-data. ' +
+        'El archivo se guarda en uploads/documents (o uploads/licenses si es DRIVER_LICENSE) y sus metadatos quedan en el usuario. ' +
+        'DRIVER_LICENSE solo se acepta para repartidores. Si algo falla, el archivo se borra del servidor.',
+      parameters: [param('IdParam')],
+      requestBody: multipartBody('UserDocumentUpload'),
+      responses: {
+        201: success('Documento cargado. Devuelve el usuario con sus documentos', ref('User')),
+        400: errorResponse('Archivo, tipo de documento o id inválido', [
+          EXAMPLES.FILE_REQUIRED,
+          EXAMPLES.INVALID_FILE_FIELD,
+          EXAMPLES.INVALID_FILE_TYPE,
+          EXAMPLES.FILE_UPLOAD_ERROR,
+          EXAMPLES.INVALID_ID,
+          EXAMPLES.INVALID_DOCUMENT_TYPE,
+        ]),
+        404: notFound,
+        413: errorResponse('El archivo supera el tamaño máximo', [EXAMPLES.FILE_TOO_LARGE]),
+        500: errorResponse('No se pudo guardar el archivo o error inesperado', [
+          EXAMPLES.FILE_SAVE_ERROR,
+          EXAMPLES.INTERNAL_ERROR,
+        ]),
       },
     },
   },

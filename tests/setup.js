@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { config, missingEnvVars } from '../src/config/env.config.js';
-import { clearDatabase, MODELS } from './helpers.js';
+import { clearDatabase, clearUploads, MODELS } from './helpers.js';
 
 // Hooks globales: corren una vez antes y después de toda la suite
 export const mochaHooks = {
@@ -26,10 +26,12 @@ export const mochaHooks = {
     // Crea los índices (como el email único) antes de empezar
     await Promise.all(MODELS.map((Model) => Model.init()));
     await clearDatabase();
+    await clearUploads();
   },
 
   async afterAll() {
     await clearDatabase();
+    await clearUploads();
     await mongoose.disconnect();
   },
 };

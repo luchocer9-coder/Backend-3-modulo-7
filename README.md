@@ -120,6 +120,8 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/mocks/seed/datase
 | GET | `/api/deliveries` | Lista entregas |
 | GET | `/api/deliveries/:id` | Obtiene una entrega |
 | PATCH | `/api/deliveries/:id/status` | Cambia el estado de una entrega o le asigna un repartidor |
+| POST | `/api/users/:id/documents` | Sube un documento de un usuario (multipart/form-data) |
+| POST | `/api/deliveries/:id/receipts` | Sube un comprobante de una entrega (multipart/form-data) |
 | GET | `/api/loggerTest` | Genera un log de prueba en cada nivel |
 | GET | `/api/docs` | Documentación interactiva con Swagger |
 
@@ -189,6 +191,13 @@ Los services detectan los errores y los lanzan. Los controllers y las rutas no a
 | `DELIVERY_NOT_FOUND` | 404 | No existe la entrega |
 | `ROUTE_NOT_FOUND` | 404 | La ruta no existe |
 | `DUPLICATE_KEY` | 409 | Ya existe un registro con ese dato único, como el email |
+| `FILE_REQUIRED` | 400 | No se envió el archivo |
+| `INVALID_FILE_FIELD` | 400 | El archivo vino en un campo distinto de `file` |
+| `INVALID_FILE_TYPE` | 400 | El archivo no es PDF, JPG ni PNG, o la extensión no coincide con el tipo |
+| `INVALID_DOCUMENT_TYPE` | 400 | El tipo de documento no existe o no corresponde al rol del usuario |
+| `FILE_UPLOAD_ERROR` | 400 | El formulario multipart está mal armado |
+| `FILE_TOO_LARGE` | 413 | El archivo supera los 5 MB |
+| `FILE_SAVE_ERROR` | 500 | No se pudo guardar el archivo en el servidor |
 | `MOCK_SEED_FAILED` | 500 | MongoDB falló durante la carga de datos de prueba |
 | `INTERNAL_ERROR` | 500 | Error inesperado |
 
@@ -384,6 +393,7 @@ tests/
 ├── deliveries.test.js
 ├── mocks.test.js
 ├── logger.test.js
+├── uploads.test.js     # Carga de documentos y comprobantes
 ├── docs.test.js        # Swagger y coherencia entre la documentación y la API
 └── general.test.js     # Health check y ruta inexistente
 ```
@@ -398,6 +408,7 @@ tests/
 | Mocks | Generar usuarios, repartidores y pedidos relacionados; insertar usuarios y datasets | Cantidad negativa, no numérica, decimal, cero o mayor a 100, sin guardar nada |
 | Logger | Genera los 6 niveles y responde la estructura esperada | Método no permitido |
 | Swagger | La página carga y contiene la documentación de ShipNow | Ruta inexistente |
+| Archivos | Subir documentos (incluida la licencia de un repartidor), acumularlos en el usuario, subir comprobantes de una entrega | Falta el archivo, tipo de documento inválido o no permitido para el rol, tipo de archivo no permitido, extensión falsa, tamaño superado, campo incorrecto, usuario o entrega inexistente, id inválido |
 
 Los errores se validan con el formato del módulo de errores: status HTTP, `code` y `message` del diccionario, `details`, `path` y `timestamp`.
 
@@ -407,4 +418,77 @@ Los errores se validan con el formato del módulo de errores: status HTTP, `code
 
 - **Los datos se crean dentro de cada test,** con los helpers (`createClient`, `createDriver`, `createOrder`) o con los endpoints de mocks. No se usan datos cargados a mano.
 - **Antes de cada test** (`beforeEach`), se borran usuarios, productos, pedidos y entregas de la base de testing. Así cada test arranca desde cero y no depende del orden ni de lo que hizo otro test.
+- **Los archivos de prueba** se generan en memoria y se guardan en `uploads-test/`, una carpeta distinta de `uploads/`. Se borra antes de cada test de archivos y al terminar la suite.
 - **Al empezar y al terminar la suite** (`tests/setup.js`), también se limpia la base. Se puede correr `npm test` varias veces seguidas sin borrar nada a mano.
+
+## Carga de archivos
+
+La API permite subir documentos de usuarios y comprobantes de entregas con [Multer](https://github.com/expressjs/multer). Los archivos se guardan en carpetas del servidor y en MongoDB solo se registran sus metadatos.
+
+### Endpoints
+
+| Método | Ruta | Campos del formulario | Dónde se guarda |
+|---|---|---|---|
+| POST | `/api/users/:id/documents` | `file` (archivo) y `documentType` | `uploads/documents/`, o `uploads/licenses/` si es `DRIVER_LICENSE` |
+| POST | `/api/deliveries/:id/receipts` | `file` (archivo) | `uploads/receipts/` |
+
+Los dos se envían como `multipart/form-data` y responden `201` con la entidad actualizada: el usuario con su lista `documents` o la entrega con su lista `receipts`.
+
+### Tipos de documento
+
+| `documentType` | Quién puede subirlo |
+|---|---|
+| `ID_CARD` | Cualquier usuario |
+| `PROOF_OF_ADDRESS` | Cualquier usuario |
+| `DRIVER_LICENSE` | Solo usuarios con rol `DRIVER` |
+
+Los comprobantes de entrega se guardan con el tipo `DELIVERY_RECEIPT`, sin necesidad de enviarlo.
+
+### Reglas de los archivos
+
+- **Formatos permitidos:** PDF, JPG y PNG. El tipo y la extensión tienen que coincidir, así que un `.exe` enviado como PDF se rechaza.
+- **Tamaño máximo:** 5 MB.
+- **Un solo archivo,** en el campo `file`.
+- **Nombre generado:** fecha, texto aleatorio y extensión original, por ejemplo `1763251200000-a1b2c3d4e5f6.pdf`, para que dos archivos nunca se pisen.
+
+### Metadatos que se guardan
+
+```json
+{
+  "originalName": "dni-frente.pdf",
+  "fileName": "1763251200000-a1b2c3d4e5f6.pdf",
+  "path": "uploads/documents/1763251200000-a1b2c3d4e5f6.pdf",
+  "mimeType": "application/pdf",
+  "size": 245810,
+  "documentType": "ID_CARD",
+  "uploadedAt": "2026-11-15T22:00:00.000Z"
+}
+```
+
+### Organización del código
+
+- `src/config/multer.config.js`: configuración centralizada de Multer, con carpetas, nombre de archivo, tipos permitidos y tamaño máximo.
+- `src/middlewares/upload.middleware.js`: recibe el archivo y convierte los errores de Multer en errores del diccionario.
+- `src/repositories/file-storage.repository.js`: mueve y borra archivos del disco.
+- `src/services/file.service.js`: arma los metadatos y borra el archivo si algo falla después de recibirlo.
+- Los services de usuarios y entregas validan la entidad y el tipo de documento, y guardan los metadatos.
+
+**Si algo falla después de recibir el archivo,** por ejemplo porque el usuario no existe, el archivo se borra del servidor. Así no quedan archivos sueltos sin una entidad asociada.
+
+Las carpetas `uploads/` y `uploads-test/` están en `.gitignore`: los archivos subidos no se suben al repositorio.
+
+### Cómo probarlo
+
+Desde Swagger (`http://localhost:8080/api/docs`):
+
+1. En **Users**, abrir `POST /api/users/{id}/documents` y tocar **Try it out**.
+2. Pegar el id de un usuario, elegir un archivo PDF, JPG o PNG y un `documentType`.
+3. Tocar **Execute**. El archivo queda en `uploads/documents/` y sus datos en el usuario.
+
+Desde PowerShell:
+
+```powershell
+curl.exe -X POST "http://localhost:8080/api/users/ID_DEL_USUARIO/documents" -F "documentType=ID_CARD" -F "file=@C:\ruta\al\archivo.pdf"
+```
+
+Los eventos de carga quedan en los logs: carga exitosa y comprobante asociado (`info`), intento de tipo no permitido y otros errores esperados (`warning`), y fallas al guardar (`error`).

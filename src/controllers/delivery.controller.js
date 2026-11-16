@@ -15,6 +15,11 @@ class DeliveryController {
     const delivery = await deliveryService.updateStatus(req.params.id, req.body);
     res.status(200).json({ payload: delivery });
   }
+
+  async uploadReceipt(req, res) {
+    const delivery = await deliveryService.uploadReceipt(req.params.id, req.file);
+    res.status(201).json({ payload: delivery });
+  }
 }
 
 export const deliveryController = new DeliveryController();

@@ -48,3 +48,18 @@ export const DELIVERY_STATUS_TRANSITIONS = Object.freeze({
   [DELIVERY_STATUS.DELIVERED]: [],
   [DELIVERY_STATUS.CANCELLED]: [],
 });
+
+// Tipos de documento que se pueden asociar a usuarios y entregas
+export const DOCUMENT_TYPES = Object.freeze({
+  ID_CARD: 'ID_CARD',
+  PROOF_OF_ADDRESS: 'PROOF_OF_ADDRESS',
+  DRIVER_LICENSE: 'DRIVER_LICENSE',
+  DELIVERY_RECEIPT: 'DELIVERY_RECEIPT',
+});
+
+// Qué documentos puede cargar cada rol: la licencia es solo para repartidores
+export const USER_DOCUMENT_TYPES_BY_ROLE = Object.freeze({
+  [USER_ROLES.USER]: [DOCUMENT_TYPES.ID_CARD, DOCUMENT_TYPES.PROOF_OF_ADDRESS],
+  [USER_ROLES.DRIVER]: [DOCUMENT_TYPES.ID_CARD, DOCUMENT_TYPES.PROOF_OF_ADDRESS, DOCUMENT_TYPES.DRIVER_LICENSE],
+  [USER_ROLES.ADMIN]: [DOCUMENT_TYPES.ID_CARD, DOCUMENT_TYPES.PROOF_OF_ADDRESS],
+});

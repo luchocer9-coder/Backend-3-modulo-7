@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { UserModel } from '../models/user.model.js';
 
-const PUBLIC_FIELDS = 'name email role';
+const PUBLIC_FIELDS = 'name email role documents';
 
 class UserRepository {
   isValidId(id) {
@@ -36,6 +36,13 @@ class UserRepository {
 
   async delete(id) {
     return UserModel.findByIdAndDelete(id).select(PUBLIC_FIELDS).lean();
+  }
+
+  // Guarda los metadatos del archivo en el usuario
+  async addDocument(id, document) {
+    return UserModel.findByIdAndUpdate(id, { $push: { documents: document } }, { returnDocument: 'after' })
+      .select(PUBLIC_FIELDS)
+      .lean();
   }
 }
 

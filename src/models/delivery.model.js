@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { DELIVERY_STATUS } from '../constants/index.js';
+import { fileSchema } from './file.schema.js';
 
 const deliverySchema = new mongoose.Schema(
   {
@@ -11,6 +12,7 @@ const deliverySchema = new mongoose.Schema(
       default: DELIVERY_STATUS.PENDING_ASSIGNMENT,
     },
     deliveredAt: { type: Date, default: null },
+    receipts: { type: [fileSchema], default: [] },
   },
   { timestamps: true },
 );

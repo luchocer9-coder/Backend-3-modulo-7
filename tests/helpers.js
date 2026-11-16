@@ -1,3 +1,5 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import supertest from 'supertest';
 import { expect } from 'chai';
 import app from '../src/app.js';
@@ -7,6 +9,7 @@ import { OrderModel } from '../src/models/order.model.js';
 import { DeliveryModel } from '../src/models/delivery.model.js';
 import { ERRORS } from '../src/errors/error-dictionary.js';
 import { USER_ROLES } from '../src/constants/index.js';
+import { UPLOADS_ROOT } from '../src/config/multer.config.js';
 
 // Supertest usa la app directamente, sin abrir un puerto
 export const request = supertest(app);
@@ -64,4 +67,25 @@ export const expectError = (res, statusCode, code) => {
   expect(res.body.code).to.equal(code);
   expect(res.body.message).to.equal(ERRORS[code].message);
   expect(new Date(res.body.timestamp).toString()).to.not.equal('Invalid Date');
+};
+
+// Archivos de prueba: se generan en memoria, no hace falta tenerlos en disco
+export const TEST_FILES = {
+  pdf: { buffer: Buffer.from('%PDF-1.4 documento de prueba'), filename: 'dni.pdf', contentType: 'application/pdf' },
+  png: { buffer: Buffer.from('imagen de prueba'), filename: 'comprobante.png', contentType: 'image/png' },
+  txt: { buffer: Buffer.from('texto plano'), filename: 'notas.txt', contentType: 'text/plain' },
+};
+
+// Borra la carpeta de archivos que generan los tests
+export const clearUploads = async () => {
+  await fs.rm(UPLOADS_ROOT, { recursive: true, force: true });
+};
+
+// Cuenta los archivos que quedaron guardados en una subcarpeta
+export const countUploadedFiles = async (folder) => {
+  try {
+    return (await fs.readdir(path.join(UPLOADS_ROOT, folder))).length;
+  } catch {
+    return 0;
+  }
 };
